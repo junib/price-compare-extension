@@ -1,0 +1,358 @@
+/* Price & Food Compare Extension Styles */
+
+/* Comparison Panel */
+#price-compare-panel,
+#food-compare-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 450px;
+    max-height: 80vh;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow: hidden;
+    display: none;
+}
+
+.compare-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.compare-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.compare-content {
+    padding: 20px;
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
+}
+
+/* Product Cards */
+.product-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.product-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.product-card.amazon {
+    border-color: #ff9900;
+}
+
+.product-card.flipkart {
+    border-color: #2874f0;
+}
+
+.product-card img {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.product-details h5 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+}
+
+.product-details .brand {
+    color: #666;
+    font-size: 14px;
+    margin: 4px 0;
+}
+
+.product-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+    align-items: center;
+}
+
+.product-meta .price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #28a745;
+}
+
+.product-meta .rating {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+.product-meta .reviews {
+    color: #666;
+    font-size: 14px;
+}
+
+.view-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.view-btn:hover {
+    background: #5568d3;
+}
+
+/* Comparison Divider */
+.comparison-divider {
+    text-align: center;
+    margin: 20px 0;
+    font-weight: 700;
+    color: #667eea;
+    font-size: 18px;
+}
+
+/* Food Comparison Styles */
+.selected-dish {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.selected-dish h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+}
+
+.dish-info {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.similar-dishes h4 {
+    margin: 0 0 16px 0;
+    color: #333;
+}
+
+.dish-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.dish-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dish-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.dish-details {
+    flex: 1;
+}
+
+.dish-details h5 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.dish-details .description {
+    font-size: 12px;
+    color: #666;
+    margin: 4px 0;
+}
+
+.dish-meta {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.dish-meta .price {
+    font-weight: 700;
+    color: #28a745;
+}
+
+.dish-meta .rating {
+    color: #ffc107;
+    font-size: 12px;
+}
+
+.dish-meta .similarity {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Compare Button */
+.price-compare-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 16px 0;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.price-compare-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.price-compare-btn:active {
+    transform: translateY(0);
+}
+
+/* Loading and Messages */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.no-results {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+}
+
+.error {
+    color: #dc3545;
+    padding: 12px;
+    background: #f8d7da;
+    border-radius: 6px;
+    margin: 12px 0;
+}
+
+.search-info {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.search-info p {
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+.search-link {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.search-link:hover {
+    background: #5568d3;
+}
+
+.note {
+    padding: 12px;
+    background: #e7f3ff;
+    border-left: 4px solid #2196F3;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #1976D2;
+}
+
+.note p {
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    #price-compare-panel,
+    #food-compare-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+    }
+}
+
+/* Scrollbar Styling */
+.compare-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.compare-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.compare-content::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.compare-content::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
