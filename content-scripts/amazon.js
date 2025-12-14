@@ -83,15 +83,41 @@
                 <button class="close-btn" id="closeCompare">×</button>
             </div>
             <div class="compare-content" id="compareContent">
-                <div class="current-product">
+                <style>
+                    .compare-content {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 15px;
+                    }
+                    .product-card {
+                        border: 1px solid #eee;
+                        border-radius: 8px;
+                        padding: 10px;
+                        background: #fff;
+                    }
+                    .product-card.amazon { border-color: #ff9900; }
+                    .product-card.flipkart { border-color: #2874f0; }
+                    .product-card.croma { border-color: #00e9bf; } /* Croma Cyan */
+                    .product-details h5 { margin: 5px 0; font-size: 13px; min-height: 40px; }
+                    .product-meta .price { font-weight: bold; display: block; margin: 5px 0; }
+                </style>
+                
+                <div class="comparison-column">
                     <h4>Amazon.in</h4>
                     <div id="amazonProduct"></div>
                 </div>
-                <div class="comparison-divider">vs</div>
-                <div class="other-products">
+                
+                <div class="comparison-column">
                     <h4>Flipkart</h4>
                     <div id="flipkartResults">
                         <p class="loading">Searching Flipkart...</p>
+                    </div>
+                </div>
+
+                <div class="comparison-column">
+                    <h4>Croma</h4>
+                    <div id="cromaResults">
+                        <p class="loading">Searching Croma...</p>
                     </div>
                 </div>
             </div>
@@ -288,6 +314,146 @@
         `;
     }
 
+    // --- Croma Logic ---
+
+    // --- Croma Logic (Iframe Strategy) ---
+
+    function searchCroma(product) {
+        const cromaDiv = document.getElementById('cromaResults');
+        cromaDiv.innerHTML = '<p class="loading">🔍 Searching Croma...</p>';
+
+        const searchQuery = extractSearchKeywords(product.title, product.brand);
+        const cromaUrl = `https://www.croma.com/searchB?q=${encodeURIComponent(searchQuery)}%3Arelevance&text=${encodeURIComponent(searchQuery)}`;
+
+        // Remove existing iframe if any
+        let existingIframe = document.getElementById('croma-search-iframe');
+        if (existingIframe) existingIframe.remove();
+
+        // Create hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.id = 'croma-search-iframe';
+        iframe.src = cromaUrl;
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-9999px';
+        iframe.sandbox = "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"; // same-origin needed for cookies/session
+
+        document.body.appendChild(iframe);
+
+        // Set a timeout for fallback
+        const timeoutId = setTimeout(() => {
+            if (cromaDiv.innerHTML.includes('loading')) {
+                cromaDiv.innerHTML = `
+                    <div class="search-info">
+                        <p class="error">Croma search timed out.</p>
+                        <a href="${cromaUrl}" target="_blank" class="search-link">View Search →</a>
+                    </div>
+                `;
+            }
+        }, 20000); // Increased timeout to 20s
+
+        // Store timeout ID to clear it if data received
+        cromaDiv.dataset.timeoutId = timeoutId;
+    }
+
+    // Listen for Croma data from background (relayed from content script in iframe)
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.action === 'cromaDataReceived') {
+            const cromaDiv = document.getElementById('cromaResults');
+            if (cromaDiv && cromaDiv.dataset.timeoutId) {
+                clearTimeout(parseInt(cromaDiv.dataset.timeoutId));
+            }
+
+            if (cromaDiv && message.data) {
+                if (message.data.found) {
+                    displayCromaProduct(message.data, cromaDiv);
+                } else {
+                    cromaDiv.innerHTML = `
+                        <div class="search-info">
+                            <p class="error">Not found on Croma</p>
+                            <a href="${message.data.searchUrl}" target="_blank" class="search-link">View Search →</a>
+                        </div>
+                    `;
+                }
+            }
+        }
+    });
+
+    function extractTopCromaProduct(doc, baseUrl) {
+        try {
+            // Croma Selectors (Common patterns)
+            // Product list item usually has class 'product-item' or inside a list
+            const productSelectors = [
+                'li[class*="product-item"]',
+                'div.cp-product',
+                'div.product-item',
+                'div[data-testid="product-card"]'
+            ];
+
+            let productElement = null;
+            for (const selector of productSelectors) {
+                const elements = doc.querySelectorAll(selector);
+                if (elements.length > 0) {
+                    productElement = elements[0];
+                    break;
+                }
+            }
+
+            if (!productElement) return null;
+
+            // Extract Title
+            const titleElement = productElement.querySelector('h3.product-title, .product-title, div[class*="product-title"] a');
+            const title = titleElement?.textContent?.trim() || '';
+
+            // Extract Price
+            const priceElement = productElement.querySelector('.amount, .new-price, .pdp-price, div[class*="price"]');
+            const priceText = priceElement?.textContent?.trim() || '';
+            const price = parsePrice(priceText);
+
+            // Extract Image
+            const imageElement = productElement.querySelector('img.product-img, img.product-image');
+            const image = imageElement?.src || imageElement?.getAttribute('data-src') || '';
+
+            // Link
+            let productUrl = '';
+            const linkElement = productElement.querySelector('a') || productElement.closest('a');
+            if (linkElement) {
+                const href = linkElement.getAttribute('href');
+                if (href) productUrl = href.startsWith('http') ? href : `https://www.croma.com${href}`;
+            }
+
+            if (!title) return null;
+
+            return {
+                title: title.substring(0, 150),
+                price,
+                currency: 'INR',
+                image,
+                url: productUrl || baseUrl
+            };
+
+        } catch (error) {
+            console.error('Error parsing croma:', error);
+            return null;
+        }
+    }
+
+    function displayCromaProduct(product, container) {
+        container.innerHTML = `
+            <div class="product-card croma">
+                ${product.image ? `<img src="${product.image}" alt="${product.title}" style="max-height:100px; display:block; margin:0 auto;" onerror="this.style.display='none'">` : ''}
+                <div class="product-details">
+                    <h5>${product.title}</h5>
+                    <div class="product-meta">
+                        ${product.price ? `<span class="price">₹${product.price.toLocaleString()}</span>` : '<span class="price">Price not available</span>'}
+                    </div>
+                    <a href="${product.url}" target="_blank" class="view-btn" style="background:#00e9bf; color:#000;">View on Croma →</a>
+                </div>
+            </div>
+        `;
+    }
+
     function extractSearchKeywords(title, brand) {
         // Remove common words and keep important keywords
         const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
@@ -317,6 +483,7 @@
 
         displayAmazonProduct(productInfo);
         searchFlipkart(productInfo);
+        searchCroma(productInfo);
 
     }
 

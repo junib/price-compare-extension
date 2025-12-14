@@ -57,6 +57,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.action === 'fetchCroma') {
+        fetch(message.url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            }
+        })
+            .then(response => response.text())
+            .then(html => {
+                sendResponse({ success: true, html: html });
+            })
+            .catch(error => {
+                console.error('Error fetching Croma:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+        return true;
+    }
+
     if (message.action === 'searchFlipkart') {
         // Store the search query for when user visits Flipkart
         chrome.storage.local.set({
@@ -103,6 +121,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             .then(success => sendResponse({ success }))
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true;
+    } else if (message.action === 'zomatoData') {
+        // Relay data found in Zomato iframe to the Swiggy content script
+        // We find the active tab that might be Swiggy
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'zomatoDataReceived',
+                    data: message.data
+                });
+            }
+        });
+        sendResponse({ success: true });
+    } else if (message.action === 'cromaData') {
+        // Relay data found in Croma iframe to the Amazon content script
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'cromaDataReceived',
+                    data: message.data
+                });
+            }
+        });
+        sendResponse({ success: true });
     } else {
         sendResponse({ success: true });
     }

@@ -16,99 +16,97 @@
         sidebar.id = 'swiggy-zomato-sidebar';
         sidebar.innerHTML = `
             <div class="sidebar-header">
-                <h3>Price Compare</h3>
-                <button id="minimizeSidebar">_</button>
+                <h3>Zomato Split View</h3>
+                <div class="header-controls">
+                    <button id="toggleWidth" title="Expand/Collapse">⬌</button>
+                    <button id="minimizeSidebar">_</button>
+                </div>
             </div>
             
-            <div class="zomato-status-section">
-                <h4>Zomato Status</h4>
-                <div id="zomatoRestaurantInfo" class="status-box">
-                    <p class="loading">Searching for this restaurant on Zomato...</p>
-                </div>
+            <div class="status-bar" id="zomatoStatusBar">
+                <span class="status-text">Searching Zomato...</span>
             </div>
 
-            <div class="comparison-section" id="comparisonContent">
-                <div class="placeholder-msg">
-                    <p>👈 Click any dish to compare prices</p>
-                </div>
+            <div class="iframe-container">
+                 <iframe id="zomato-viewer" src="about:blank" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+                 <div class="overlay-msg" id="overlayMsg">
+                    <p>Locating restaurant...</p>
+                 </div>
             </div>
         `;
 
-        // Inject Styles specifically for sidebar
+        // Inject Styles
         const style = document.createElement('style');
         style.textContent = `
             #swiggy-zomato-sidebar {
                 position: fixed;
                 top: 80px;
                 right: 0;
-                width: 320px;
+                width: 400px; /* Wider default */
                 height: calc(100vh - 80px);
                 background: white;
-                box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+                box-shadow: -2px 0 10px rgba(0,0,0,0.2);
                 z-index: 10000;
                 display: flex;
                 flex-direction: column;
-                font-family: sans-serif;
-                transition: transform 0.3s;
-                border-left: 1px solid #eee;
+                transition: width 0.3s, transform 0.3s;
+                border-left: 1px solid #ccc;
             }
             #swiggy-zomato-sidebar.minimized {
-                transform: translateX(280px);
+                transform: translateX(360px);
             }
+            #swiggy-zomato-sidebar.wide {
+                width: 50vw; /* Split view mode */
+            }
+            
             .sidebar-header {
-                padding: 15px;
-                background: linear-gradient(135deg, #fc8019 0%, #ff5e3a 100%); /* Swiggy Orange-ish */
+                padding: 10px 15px;
+                background: #cb202d; /* Zomato Red */
                 color: white;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
-            .sidebar-header h3 { margin: 0; font-size: 16px; }
-            #minimizeSidebar {
-                background: none; border: none; color: white; font-weight: bold; cursor: pointer; font-size: 18px;
+            .sidebar-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+            .header-controls button {
+                background: rgba(255,255,255,0.2); border: none; color: white; 
+                cursor: pointer; padding: 4px 8px; border-radius: 4px; margin-left: 5px;
             }
             
-            .zomato-status-section {
-                padding: 15px;
-                border-bottom: 5px solid #f0f0f0;
-                background: #fff;
-            }
-            .status-box {
+            .status-bar {
+                padding: 8px 15px;
                 background: #f8f8f8;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 13px;
-                margin-top: 5px;
+                border-bottom: 1px solid #eee;
+                font-size: 12px;
+                color: #555;
+                display: flex;
+                justify-content: space-between;
             }
             
-            .comparison-section {
+            .iframe-container {
                 flex: 1;
-                padding: 15px;
-                overflow-y: auto;
+                position: relative;
+                background: #f0f0f0;
             }
-            
-            .cmp-card {
-                border: 1px solid #eee;
-                border-radius: 8px;
-                padding: 12px;
-                margin-bottom: 12px;
+            #zomato-viewer {
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: white;
             }
-            .cmp-card.swiggy { border-left: 4px solid #fc8019; }
-            .cmp-card.zomato { border-left: 4px solid #E23744; }
-            
-            .cmp-price { font-size: 18px; font-weight: bold; color: #333; }
-            .cmp-title { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-            .cmp-meta { font-size: 11px; color: #777; margin-top: 5px; }
-            
-            .placeholder-msg {
-                text-align: center; color: #999; margin-top: 50px;
+            .overlay-msg {
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                z-index: 10;
             }
-            
-            .z-btn {
-                display: block; width: 100%; text-align: center; background: #E23744; color: white; 
-                padding: 8px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 10px;
-                box-sizing: border-box;
-            }
+            .hidden { display: none !important; }
         `;
         document.head.appendChild(style);
         document.body.appendChild(sidebar);
@@ -119,6 +117,10 @@
             const btn = document.getElementById('minimizeSidebar');
             btn.textContent = sidebar.classList.contains('minimized') ? '◀' : '_';
         });
+
+        document.getElementById('toggleWidth').addEventListener('click', () => {
+            sidebar.classList.toggle('wide');
+        });
     }
 
     // --- LOGIC ---
@@ -126,142 +128,174 @@
     function detectRestaurant() {
         // Try multiple strategies to find restaurant name
         let name = '';
-        if (document.title.includes('Order from')) {
-            name = document.title.split('Order from')[1].split('|')[0].trim();
-        } else if (document.title.includes('|')) {
-            name = document.title.split('|')[0].trim();
+        let location = '';
+
+        // Strategy 1: URL Parsing (Most reliable for Swiggy)
+        // URL format: /restaurants/name-area-city-id
+        const path = window.location.pathname;
+        if (path.includes('/restaurants/')) {
+            const parts = path.split('/').pop().split('-');
+            // Last part is ID, usually last but one is city, before that is area
+            // We can just take the whole string minus the last ID part and replace hyphens with spaces
+            if (parts.length > 1 && !isNaN(parts[parts.length - 1])) {
+                parts.pop(); // Remove ID
+                // Remove common words like 'restaurant' if needed, but usually the slug is good
+                const fullNameAndLoc = parts.join(' ');
+
+                // We need to separate name from location... difficult without knowledge.
+                // But generally, the Page Title has the clean name.
+            }
+        }
+
+        // Strategy 2: Title Parsing (Clean name)
+        // Title: "Order from KFC Bucket Meals Checking in Mg Road | Swiggy"
+        // Title: "Order from Restaurant Name in Location | Swiggy"
+        const title = document.title;
+        if (title.includes('Order from')) {
+            const afterOrderFrom = title.split('Order from')[1];
+            if (afterOrderFrom.includes(' in ')) {
+                const splitIn = afterOrderFrom.split(' in ');
+                name = splitIn[0].trim();
+                const afterIn = splitIn[1];
+                if (afterIn.includes('|')) {
+                    location = afterIn.split('|')[0].trim();
+                } else {
+                    location = afterIn.trim();
+                }
+            } else if (afterOrderFrom.includes('|')) {
+                name = afterOrderFrom.split('|')[0].trim();
+            }
+        } else if (title.includes('|')) {
+            name = title.split('|')[0].trim();
         }
 
         // Sanity check: Don't detect "Swiggy" as the restaurant name
-        if (name && !name.toLowerCase().includes('swiggy') && name !== restaurantName) {
+        if (name && !name.toLowerCase().includes('swiggy') && (name !== restaurantName)) {
             restaurantName = name;
-            console.log('Swiggy Ext: Detected Restaurant', restaurantName);
+            console.log('Swiggy Ext: Detected Restaurant:', restaurantName, location);
             createSidebar();
-            findRestaurantOnZomato(restaurantName);
+
+            // Update Header
+            const header = document.querySelector('.sidebar-header h3');
+            if (header) header.textContent = `Zomato: ${name.substring(0, 15)}...`;
+
+            findRestaurantOnZomato(restaurantName, location);
         }
     }
 
     // Phase 1: Search for the restaurant itself
-    function findRestaurantOnZomato(name) {
-        const infoBox = document.getElementById('zomatoRestaurantInfo');
-        infoBox.innerHTML = `<p class="loading">Searching Zomato for "${name}"...</p>`;
+    function findRestaurantOnZomato(name, location = '') {
+        const statusBar = document.querySelector('.status-text');
+        const overlay = document.getElementById('overlayMsg');
+        if (statusBar) statusBar.textContent = `Searching Zomato for "${name}"...`;
+        if (overlay) overlay.classList.remove('hidden');
+        if (overlay) overlay.innerHTML = `<p>Locating restaurant...</p>`;
 
-        // Use background script to search
-        const query = `${name} restaurant`; // simplified query
+
+        // Query: "Name Location restaurant"
+        const query = `${name} ${location} restaurant`.trim();
         const searchUrl = `https://www.zomato.com/search?q=${encodeURIComponent(query)}`;
 
         chrome.runtime.sendMessage({ action: 'fetchZomato', url: searchUrl }, (response) => {
+            const viewer = document.getElementById('zomato-viewer');
+
             if (response && response.success) {
-                // Parse Search Results
-                // Zomato search results are usually in json/blob or specific DOM structure
-                // Heuristic: Look for the first "result-title" or similar link
-                // Since Zomato is SPA/SSR, we might find <a href="/city/restaurant-name...">
+                // Parse to find the restaurant URL
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(response.html, 'text/html');
 
-                // Simple regex to find the first restaurant link in the HTML
-                // Pattern: href="https://www.zomato.com/[city]/[restaurant]..." class="..."
-                const linkMatch = response.html.match(/href="(https:\/\/www\.zomato\.com\/[a-zA-Z-]+\/[a-zA-Z0-9-]+)(\/order|"[^>]*class="[^"]*result-title)/i);
+                // Strategy: Look for the first anchor tag that looks like a restaurant link
+                // Zomato classes are obfuscated, so we rely on structure
+                const links = Array.from(doc.querySelectorAll('a[href*="/"]'));
+                const resLink = links.find(l => {
+                    const href = l.getAttribute('href');
+                    // Start with relative or absolute check, normalize to full URL for checks if need be
+                    // But usually hrefs are relative or full. 
+                    // We just check for /city/restaurant-slug pattern roughly.
+                    return href && !href.includes('/order')
+                        && !href.includes('/reviews')
+                        && !href.includes('/photos')
+                        && !href.includes('/menu')
+                        && !href.includes('zomato.com/mobile')
+                        && !href.includes('zomato.com/contact')
+                        && (href.match(/\//g) || []).length >= 3;
+                });
 
-                if (linkMatch && linkMatch[1]) {
-                    zomatoUrl = linkMatch[1];
-                    infoBox.innerHTML = `
-                        <div style="color: #2e7d32; font-weight: bold;">✓ Found on Zomato</div>
-                        <a href="${zomatoUrl}" target="_blank" class="z-btn">Open in Zomato</a>
-                    `;
+                if (resLink) {
+                    let bestMatchUrl = resLink.href;
+                    // Fix relative URLs if any (though usually Zomato uses absolute)
+                    if (bestMatchUrl.startsWith('/')) {
+                        bestMatchUrl = 'https://www.zomato.com' + bestMatchUrl;
+                    }
+                    zomatoUrl = bestMatchUrl;
+
+                    if (statusBar) statusBar.innerHTML = `✓ Restaurant found. <a href="${zomatoUrl}" target="_blank">Open in New Tab</a>`;
+
+                    // Load into Iframe
+                    if (viewer) {
+                        viewer.src = zomatoUrl;
+                        if (overlay) overlay.classList.add('hidden');
+                    }
+
                 } else {
-                    infoBox.innerHTML = `
-                        <div style="color: #e65100;">⚠️ Could not auto-detect link</div>
-                        <a href="${searchUrl}" target="_blank" class="z-btn">Search Manually</a>
-                    `;
+                    // Fallback: Show search results
+                    if (statusBar) statusBar.textContent = 'Exact match not found. Showing search results.';
+                    if (viewer) {
+                        viewer.src = searchUrl;
+                        if (overlay) overlay.classList.add('hidden');
+                    }
                 }
             } else {
-                infoBox.innerHTML = `<p class="error">Search failed. ${response.error || ''}</p>`;
-            }
-        });
-    }
-
-    // Phase 2: Compare specific dish
-    function compareDish(dishName, price) {
-        if (!restaurantName) return;
-
-        const content = document.getElementById('comparisonContent');
-        content.innerHTML = `
-            <div class="cmp-card swiggy">
-                <div class="cmp-title">${dishName}</div>
-                <div class="cmp-price">₹${price}</div>
-                <div class="cmp-meta">Swiggy Price</div>
-            </div>
-            <div class="cmp-card zomato">
-                <div class="cmp-title">Zomato</div>
-                <div id="zomatoPriceBox"><p class="loading">Checking price...</p></div>
-            </div>
-        `;
-
-        // Search Zomato for this dish
-        // We search: "Restaurant Name Dish Name"
-        const query = `${restaurantName} ${dishName}`;
-        const searchUrl = `https://www.zomato.com/search?q=${encodeURIComponent(query)}`;
-
-        chrome.runtime.sendMessage({ action: 'fetchZomato', url: searchUrl }, (response) => {
-            const zBox = document.getElementById('zomatoPriceBox');
-            if (response && response.success) {
-                // Try to scrape price from search result snippet
-                // Look for "₹" near the dish name
-                // This is extremely heuristic-based
-                const cleanHtml = response.html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gm, ""); // remove scripts to reduce noise
-                const doc = new DOMParser().parseFromString(cleanHtml, 'text/html');
-
-                // Zomato search results often have <h4 class="...name...">Dish Name</h4> ... <div class="...cost...">₹199</div>
-                // We will look for elements containing the dish name loosely
-
-                // Generic Price scraping from the entire text blob of the first result card?
-                // Let's try to finding the first "₹" followed by digits
-
-                // Better: Pass link to search results
-                zBox.innerHTML = `
-                    <div style="font-size: 13px; color: #555;">
-                        Unable to extract exact price automatically (Security restricted).
-                    </div>
-                    <a href="${searchUrl}" target="_blank" class="z-btn" style="background: #333; margin-top:8px;">Check Price on Zomato</a>
-                 `;
-            } else {
-                zBox.innerHTML = 'Error checking price.';
+                if (statusBar) statusBar.textContent = 'Error contacting Zomato.';
+                // Even on error, try loading search URL in iframe? 
+                // If background fetch failed, iframe might also fail if blocked, but worth a try or just leave error.
+                // We'll leave the error overlay for network failures.
+                if (overlay) overlay.innerHTML = `<p>Connection failed. <a href="${searchUrl}" target="_blank">Search Manually</a></p>`;
             }
         });
     }
 
     // --- INIT & EVENTS ---
 
-    function handleGlobalClick(e) {
-        // Detect click on dishes
-        const dishCard = e.target.closest('[data-swiggy-hooked], [data-testid="normal-dish-item"], [data-testid="recommended-dish-item"]');
+    // Event Listener for Data from Zomato Iframe
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.action === 'zomatoDataReceived') {
+            console.log('Swiggy Ext: Received Data from Zomato', message.data);
+            updateSidebarUI(message.data);
+        }
+    });
 
-        if (dishCard) {
-            // Extract info
-            // (Re-using parts of extraction logic from previous version, simplified)
-            let title = '';
-            let price = '';
+    function updateSidebarUI(data) {
+        const statusBar = document.querySelector('.status-text');
+        const overlay = document.getElementById('overlayMsg');
+        const header = document.querySelector('.sidebar-header h3');
 
-            // Text Search
-            const text = dishCard.innerText;
-            const priceMatch = text.match(/₹\s?([\d,]+)/);
-            if (priceMatch) {
-                price = priceMatch[1];
-                // Assume title is the first distinct line or header
-                const lines = text.split('\n').filter(l => l.length > 3 && !l.includes('₹') && !l.toLowerCase().includes('add'));
-                if (lines.length > 0) title = lines[0];
-            }
+        if (data.bestMatchName) {
+            if (header) header.textContent = `Zomato: ${data.bestMatchName.substring(0, 15)}...`;
 
-            if (title && price) {
-                if (sidebar) {
-                    sidebar.classList.remove('minimized');
-                    compareDish(title, price);
-                }
+            let statusHTML = `✓ Found: ${data.bestMatchName}`;
+            if (data.rating) statusHTML += ` | <span style="color:green; font-weight:bold">★ ${data.rating}</span>`;
+            if (data.cost) statusHTML += ` | ${data.cost}`;
+
+            if (statusBar) statusBar.innerHTML = statusHTML;
+        }
+
+        if (data.bestMatchUrl && data.bestMatchUrl !== zomatoUrl) {
+            zomatoUrl = data.bestMatchUrl;
+            const viewer = document.getElementById('zomato-viewer');
+
+            // If we are currently showing search results, maybe we should load the specific page?
+            // Or just keep the user on search results but provide a direct link?
+            // Let's provide a direct link in the status bar to be safe, as iframe redirects might be blocked
+            if (statusBar) {
+                statusBar.innerHTML += ` <a href="${zomatoUrl}" target="_blank" style="margin-left:5px;">Open Page ↗</a>`;
             }
         }
+
+        if (overlay) overlay.classList.add('hidden');
     }
 
     // Init
     setInterval(detectRestaurant, 2000); // Check periodically for nav changes
-    document.addEventListener('click', handleGlobalClick);
 
 })();

@@ -1,0 +1,60 @@
+[
+    {
+        "id": 1,
+        "priority": 1,
+        "action": {
+            "type": "modifyHeaders",
+            "responseHeaders": [
+                {
+                    "header": "x-frame-options",
+                    "operation": "remove"
+                },
+                {
+                    "header": "content-security-policy",
+                    "operation": "remove"
+                },
+                {
+                    "header": "frame-options",
+                    "operation": "remove"
+                }
+            ]
+        },
+        "condition": {
+            "urlFilter": "zomato.com",
+            "resourceTypes": [
+                "sub_frame",
+                "main_frame",
+                "xmlhttprequest"
+            ]
+        }
+    },
+    {
+        "id": 2,
+        "priority": 1,
+        "action": {
+            "type": "modifyHeaders",
+            "responseHeaders": [
+                {
+                    "header": "x-frame-options",
+                    "operation": "remove"
+                },
+                {
+                    "header": "content-security-policy",
+                    "operation": "remove"
+                },
+                {
+                    "header": "frame-options",
+                    "operation": "remove"
+                }
+            ]
+        },
+        "condition": {
+            "urlFilter": "croma.com",
+            "resourceTypes": [
+                "sub_frame",
+                "main_frame",
+                "xmlhttprequest"
+            ]
+        }
+    }
+]
